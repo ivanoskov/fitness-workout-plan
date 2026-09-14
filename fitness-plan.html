@@ -125,7 +125,30 @@
     ];
     let active = 0;
     let session = null, viewed = null, viewedKind = 'exercise';
-    const weights = new Map();
+    const weights = new Map([
+      ['Приседание со штангой', 30],
+      ['Жим штанги лёжа', 17],
+      ['Тяга верхнего блока', 30],
+      ['Тяга нижнего блока к поясу', 30],
+      ['Бабочка в тренажёре', 30],
+      ['Сгибание рук с EZ-грифом', 15],
+      ['Разгибание рук с канатом', 15],
+      ['Разведения гантелей в стороны', 6],
+      ['Скручивания с канатом на коленях', 20],
+      ['Румынская тяга', 35],
+      ['Тяга гантелей с упором грудью', 10],
+      ['Жим гантелей сидя', 8],
+      ['Болгарский сплит-присед с гантелями', 8],
+      ['Подъёмы на носки сидя', 25],
+      ['Жим ногами под 45°', 30],
+      ['Тяга верхнего блока узким хватом', 30],
+      ['Сгибание ног лёжа', 35],
+      ['Обратная бабочка', 25],
+      ['Ягодичный мост со штангой', 30]
+    ]);
+    const weightNotes = new Map([
+      ['Жим ногами под 45°', 'Диски: 2 × 15 кг; вес платформы не учтён']
+    ]);
     const efforts = new Map();
     const $ = selector => document.querySelector(selector);
     function animateIn(targets) {
@@ -163,10 +186,12 @@
       } else { video.removeAttribute('src'); video.removeAttribute('poster'); video.load(); }
       $('#detailName').textContent = item[0]; $('#sets').textContent = item[1]; $('#reps').textContent = item[2]; $('#cue').textContent = item[4];
       $('#exerciseMetrics').classList.toggle('hidden', isWarmup);
-      const detail = $('#detail'); detail.classList.remove('hidden'); detail.setAttribute('aria-hidden', 'false'); detail.scrollTop = 0;
+      const detail = $('#detail');
+      const wasHidden = detail.classList.contains('hidden');
+      detail.classList.remove('hidden'); detail.setAttribute('aria-hidden', 'false'); detail.scrollTop = 0;
       document.body.style.overflow = 'hidden';
       tick();
-      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && window.anime) anime.animate(detail, { opacity: [0, 1], translateX: [18, 0], duration: 220, ease: 'out(3)' });
+      if (wasHidden && !window.matchMedia('(prefers-reduced-motion: reduce)').matches && window.anime) anime.animate(detail, { opacity: [0, 1], translateX: [18, 0], duration: 220, ease: 'out(3)' });
     }
     function closeExercise() {
       $('#detailVideo').pause();
@@ -187,7 +212,7 @@
         $('#plusWeight').disabled = value >= 10;
         $('#minusWeight').style.opacity = $('#minusWeight').disabled ? '.35' : '1';
         $('#plusWeight').style.opacity = $('#plusWeight').disabled ? '.35' : '1';
-        $('#weightNote').textContent = 'Субъективное усилие · от 1 до 10';
+        $('#weightNote').textContent = 'Усилие на тренажёре · от 1 до 10';
         return;
       }
       const value = weights.get(viewed[0]);
@@ -195,7 +220,7 @@
       $('#minusWeight').disabled = value === undefined || value === 0;
       $('#minusWeight').style.opacity = $('#minusWeight').disabled ? '.35' : '1';
       $('#plusWeight').disabled = false; $('#plusWeight').style.opacity = '1';
-      const unit = /гантел|Молотки/.test(viewed[0]) ? 'на одну гантель' : /штанг|гриф/.test(viewed[0]) ? 'общий вес с грифом' : 'вес на тренажёре / отягощение';
+      const unit = weightNotes.get(viewed[0]) || (/гантел|Молотки/.test(viewed[0]) ? 'на одну гантель' : /штанг|гриф/.test(viewed[0]) ? 'общий вес с грифом' : 'вес на тренажёре / отягощение');
       $('#weightNote').textContent = (value === undefined ? 'Вес не задан · ' : '') + unit + ' · шаг 0,5 кг';
     }
     function changeWeight(delta) {
