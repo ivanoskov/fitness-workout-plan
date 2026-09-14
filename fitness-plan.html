@@ -18,6 +18,7 @@
   <main class="mx-auto min-h-dvh max-w-[510px] bg-[#fbfbfa] px-5 pb-28 pt-[env(safe-area-inset-top)] sm:shadow-2xl">
     <header class="flex h-21 items-center border-b border-neutral-200">
       <h1 class="text-[25px] font-semibold tracking-[-0.055em]">Тренировки</h1>
+      <span id="timer" class="ml-auto font-medium tabular-nums"></span>
     </header>
 
     <section id="plan">
@@ -32,13 +33,32 @@
     <i class="hgi-stroke hgi-play text-[22px]"></i>Начать
   </button>
 
-  <aside id="detail" class="fixed inset-0 z-20 mx-auto hidden max-w-[510px] overflow-y-auto bg-[#fbfbfa] px-5 pb-10 pt-[env(safe-area-inset-top)]" aria-hidden="true">
+  <div id="sessionControls" class="fixed inset-x-0 bottom-0 z-30 mx-auto hidden max-w-[510px] grid-cols-[1fr_2fr] gap-2 border-t border-neutral-200 bg-white p-3 pb-[max(12px,env(safe-area-inset-bottom))]">
+    <button id="stop" class="min-h-14 rounded-xl bg-neutral-100 font-semibold">Стоп</button>
+    <button id="next" class="min-h-14 rounded-xl bg-neutral-950 font-semibold text-white">Следующее</button>
+  </div>
+  <aside id="result" class="fixed inset-0 z-40 mx-auto hidden max-w-[510px] overflow-auto bg-[#fbfbfa] px-5 py-10">
+    <h2 id="resultTitle" class="text-3xl font-semibold tracking-tight"></h2>
+    <div id="resultStats" class="my-6"></div>
+    <h3 class="mb-4 text-sm text-neutral-500">Время по упражнениям, включая отдых</h3>
+    <div id="chart" class="space-y-4"></div>
+    <button id="dismissResult" class="mt-8 min-h-14 w-full rounded-xl bg-neutral-950 font-semibold text-white">К тренировкам</button>
+  </aside>
+  <aside id="detail" class="fixed inset-0 z-20 mx-auto hidden max-w-[510px] overflow-y-auto bg-[#fbfbfa] px-5 pb-32 pt-[env(safe-area-inset-top)]" aria-hidden="true">
     <header class="flex h-21 items-center justify-between border-b border-neutral-200">
       <button type="button" class="grid size-11 place-items-center rounded-full text-neutral-900 transition-colors hover:bg-neutral-200 focus-visible:outline-2 focus-visible:outline-neutral-950" aria-label="Назад к упражнениям" onclick="closeExercise()"><i class="hgi-stroke hgi-arrow-left-01 text-[23px]"></i></button>
-      <span id="step" class="text-[13px] font-medium text-neutral-500"></span><span class="w-11"></span>
+      <span id="step" class="text-[13px] font-medium text-neutral-500"></span><span id="detailTimer" class="text-sm tabular-nums"></span>
     </header>
     <img id="detailImage" class="mt-5 aspect-square w-full rounded-2xl bg-neutral-100 object-cover grayscale" alt="">
     <h2 id="detailName" class="mt-6 text-[30px] font-semibold leading-[1.08] tracking-[-0.055em]"></h2>
+    <div class="mt-6 rounded-2xl border border-neutral-200 bg-white p-4">
+      <div class="flex items-center justify-between gap-3">
+        <button id="minusWeight" aria-label="Уменьшить вес на 0,5 кг" class="size-14 rounded-xl bg-neutral-100 text-3xl">−</button>
+        <span class="text-center"><b id="weight" class="text-4xl font-semibold tabular-nums"></b><span class="ml-1 text-neutral-500">кг</span></span>
+        <button id="plusWeight" aria-label="Увеличить вес на 0,5 кг" class="size-14 rounded-xl bg-neutral-100 text-3xl">+</button>
+      </div>
+      <p id="weightNote" class="mt-3 text-center text-xs text-neutral-500"></p>
+    </div>
     <div class="mt-6 grid grid-cols-3 gap-3 text-center">
       <div class="rounded-2xl border border-neutral-300 bg-white py-4"><b id="sets" class="block text-[21px] font-semibold tracking-[-0.04em]"></b><span class="mt-1 block text-[12px] leading-tight text-neutral-500">подходы</span></div>
       <div class="rounded-2xl border border-neutral-300 bg-white py-4"><b id="reps" class="block text-[21px] font-semibold tracking-[-0.04em]"></b><span class="mt-1 block text-[12px] leading-tight text-neutral-500">повторы</span></div>
@@ -88,6 +108,8 @@
       ]}
     ];
     let active = 0;
+    let session = null, viewed = null;
+    const weights = new Map();
     const $ = selector => document.querySelector(selector);
     function animateIn(targets) {
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !window.anime) return;
@@ -101,18 +123,109 @@
       animateIn('.exercise-row');
     }
     function exerciseCard(item, index, extra) { return `<button type="button" onclick="openExercise(${index}, ${extra})" class="exercise-row flex min-h-24 w-full items-center gap-3 rounded-2xl border border-neutral-200 bg-white p-3 text-left shadow-[0_1px_1px_rgba(0,0,0,.02)] transition-[border-color,background-color,box-shadow] duration-200 hover:border-neutral-400 hover:bg-neutral-50 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-neutral-950"><img loading="lazy" src="${base + item[3]}" alt="GIF: ${item[0]}" class="size-18 shrink-0 rounded-xl bg-neutral-100 object-cover grayscale"><span class="min-w-0 flex-1"><b class="block text-[16px] leading-snug tracking-[-0.02em]">${item[0]}</b><span class="mt-1 block text-[14px] text-neutral-500">${item[1]} × ${item[2]}</span></span><i class="hgi-stroke hgi-arrow-right-01 shrink-0 text-[21px] text-neutral-500"></i></button>`; }
-    function selectWorkout(index) { active = index; render(); }
+    function selectWorkout(index) { if (session) return; active = index; render(); }
     function openExercise(index, extra = false) {
+      if (session && (extra || index !== session.index)) return;
       const collection = extra ? workouts[active].extras : workouts[active].items;
       const item = collection[index];
+      viewed = item;
+      updateWeight();
       $('#step').textContent = extra ? 'Дополнительно' : `${index + 1}/${workouts[active].items.length}`;
       $('#detailImage').src = base + item[3]; $('#detailImage').alt = `GIF: ${item[0]}`;
       $('#detailName').textContent = item[0]; $('#sets').textContent = item[1]; $('#reps').textContent = item[2]; $('#cue').textContent = item[4];
       const detail = $('#detail'); detail.classList.remove('hidden'); detail.setAttribute('aria-hidden', 'false'); detail.scrollTop = 0;
+      document.body.style.overflow = 'hidden';
+      tick();
       if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && window.anime) anime.animate(detail, { opacity: [0, 1], translateX: [18, 0], duration: 220, ease: 'out(3)' });
     }
-    function closeExercise() { const detail = $('#detail'); detail.classList.add('hidden'); detail.setAttribute('aria-hidden', 'true'); }
-    $('#start').addEventListener('click', () => openExercise(0));
+    function closeExercise() {
+      const detail = $('#detail'); detail.classList.add('hidden'); detail.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+      if (session) $('#next').textContent = 'Продолжить';
+    }
+    function updateWeight() {
+      const value = weights.get(viewed[0]);
+      $('#weight').textContent = value === undefined ? '—' : value.toLocaleString('ru-RU');
+      $('#minusWeight').disabled = value === undefined || value === 0;
+      $('#minusWeight').style.opacity = $('#minusWeight').disabled ? '.35' : '1';
+      const unit = /гантел|Молотки/.test(viewed[0]) ? 'на одну гантель' : /штанг|гриф/.test(viewed[0]) ? 'общий вес с грифом' : 'вес на тренажёре / отягощение';
+      $('#weightNote').textContent = (value === undefined ? 'Вес не задан · ' : '') + unit + ' · шаг 0,5 кг';
+    }
+    function changeWeight(delta) {
+      if (!viewed) return;
+      weights.set(viewed[0], Math.max(0, (weights.get(viewed[0]) || 0) + delta));
+      updateWeight();
+    }
+    function formatTime(ms) {
+      const seconds = Math.floor(Math.max(0, ms) / 1000);
+      return [Math.floor(seconds / 60), seconds % 60].map(n => String(n).padStart(2, '0')).join(':');
+    }
+    function tick() {
+      const text = session ? formatTime(Date.now() - session.start) : '';
+      $('#timer').textContent = text; $('#detailTimer').textContent = text;
+    }
+    function startSession() {
+      if (session) return;
+      const now = Date.now();
+      session = { start: now, exerciseStart: now, index: 0, rows: [] };
+      $('#result').classList.add('hidden');
+      $('#start').classList.add('hidden');
+      $('#sessionControls').classList.remove('hidden');
+      $('#sessionControls').classList.add('grid');
+      $('#next').textContent = 'Следующее';
+      openExercise(0);
+    }
+    function recordExercise(completed) {
+      const now = Date.now();
+      const item = workouts[active].items[session.index];
+      session.rows.push({ name: item[0], ms: now - session.exerciseStart, completed });
+      session.exerciseStart = now;
+    }
+    function nextExercise() {
+      if (!session) return;
+      if ($('#detail').classList.contains('hidden')) {
+        openExercise(session.index);
+      } else {
+        recordExercise(true);
+        if (session.index === workouts[active].items.length - 1) { finishSession(true); return; }
+        session.index++;
+        openExercise(session.index);
+      }
+      $('#next').textContent = session.index === workouts[active].items.length - 1 ? 'Завершить' : 'Следующее';
+    }
+    function finishSession(completed = false) {
+      if (!session) return;
+      if (!completed) recordExercise(false);
+      const elapsed = Date.now() - session.start;
+      const rows = session.rows;
+      const count = rows.filter(r => r.completed).length;
+      $('#resultTitle').textContent = completed ? 'Тренировка завершена' : 'Тренировка остановлена';
+      $('#resultStats').textContent = formatTime(elapsed) + ' · ' + count + ' из ' + workouts[active].items.length + ' упражнений завершено';
+      const max = Math.max(1, ...rows.map(r => r.ms));
+      $('#chart').replaceChildren();
+      rows.forEach(row => {
+        const block = document.createElement('div');
+        const label = document.createElement('p');
+        label.className = 'mb-2 text-sm';
+        label.textContent = row.name + (row.completed ? '' : ' · не завершено') + ' — ' + formatTime(row.ms);
+        const track = document.createElement('div');
+        track.className = 'h-2 rounded-full bg-neutral-200';
+        const bar = document.createElement('div');
+        bar.className = 'h-2 rounded-full bg-neutral-900';
+        bar.style.width = (100 * row.ms / max) + '%';
+        track.append(bar); block.append(label, track); $('#chart').append(block);
+      });
+      session = null; tick(); closeExercise();
+      $('#sessionControls').classList.add('hidden'); $('#sessionControls').classList.remove('grid');
+      $('#start').classList.remove('hidden'); $('#result').classList.remove('hidden');
+    }
+    $('#start').addEventListener('click', startSession);
+    $('#next').addEventListener('click', nextExercise);
+    $('#stop').addEventListener('click', () => finishSession(false));
+    $('#dismissResult').addEventListener('click', () => $('#result').classList.add('hidden'));
+    $('#minusWeight').addEventListener('click', () => changeWeight(-0.5));
+    $('#plusWeight').addEventListener('click', () => changeWeight(0.5));
+    setInterval(tick, 1000);
     render();
   </script>
 </body>
