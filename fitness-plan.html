@@ -49,7 +49,8 @@
       <button type="button" class="grid size-11 place-items-center rounded-full text-neutral-900 transition-colors hover:bg-neutral-200 focus-visible:outline-2 focus-visible:outline-neutral-950" aria-label="Назад к упражнениям" onclick="closeExercise()"><i class="hgi-stroke hgi-arrow-left-01 text-[23px]"></i></button>
       <span id="step" class="text-[13px] font-medium text-neutral-500"></span><span id="detailTimer" class="text-sm tabular-nums"></span>
     </header>
-    <img id="detailImage" class="mt-5 aspect-square w-full rounded-2xl bg-neutral-100 object-cover grayscale" alt="">
+    <video id="detailVideo" class="mt-5 aspect-square w-full rounded-2xl bg-neutral-100 object-contain" autoplay muted loop playsinline preload="metadata"></video>
+    <div id="detailPlaceholder" class="mt-5 hidden aspect-square w-full items-center justify-center rounded-2xl bg-neutral-100 text-sm text-neutral-500">Анимация пока недоступна</div>
     <h2 id="detailName" class="mt-6 text-[30px] font-semibold leading-[1.08] tracking-[-0.055em]"></h2>
     <div class="mt-6 rounded-2xl border border-neutral-200 bg-white p-4">
       <div class="flex items-center justify-between gap-3">
@@ -69,7 +70,18 @@
 
   <script src="https://cdn.jsdelivr.net/npm/animejs@4.5.0/dist/bundles/anime.umd.min.js"></script>
   <script>
-    const base = 'https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/';
+    const media = {
+      'Приседание со штангой': '0054',
+      'Бабочка в тренажёре': '0051',
+      'Румынская тяга': '0060',
+      'Болгарский сплит-присед с гантелями': '0063',
+      'Жим ногами под 45°': '0074',
+      'Сгибание ног лёжа': '0075',
+      'Жим гантелей сидя': '0080',
+      'Разгибание рук с канатом': '0085',
+      'Разведения гантелей в стороны': '0096',
+      'Обратная бабочка': '0099'
+    };
     const workouts = [
       { id: 'A', label: 'A', subtitle: 'Ноги + грудь', items: [
         ['Приседание со штангой', '3', '6–8', 'videos/0043-qXTaZnJ.gif', 'Корпус собран, колени следуют за носками.'],
@@ -87,11 +99,11 @@
         ['Румынская тяга', '3', '8–10', 'videos/0085-wQ2c4XD.gif', 'Таз назад, спина нейтральна, штанга близко к ногам.'],
         ['Жим гантелей на наклонной скамье', '3', '8–12', 'videos/0314-ns0SIbU.gif', 'Лопатки стабильны, опускай гантели плавно.'],
         ['Тяга гантелей с упором грудью', '3', '8–12', 'videos/0327-7vG5o25.gif', 'Своди лопатки и веди локти назад, не раскачивая корпус.'],
-        ['Жим гантелей сидя', '2', '8–10', 'videos/0405-znQUdHY.gif', 'Не прогибай поясницу, двигай вес подконтрольно.'],
+        ['Жим гантелей сидя', '2', '8–10', null, 'Не прогибай поясницу, двигай вес подконтрольно.'],
         ['Молотки с гантелями', '2', '10–15', 'videos/0313-slDvUAU.gif', 'Не раскачивай корпус и не выводи локти вперёд.'],
         ['Разгибание рук над головой с канатом', '2', '10–15', 'videos/0194-2IxROQ1.gif', 'Локти направлены вперёд; держи плечи стабильными.']
       ], extras: [
-        ['Сплит-присед с гантелями', '3', '8–10 / нога', 'videos/0410-qx4fgX7.gif', 'Контролируй колено передней ноги; задняя только помогает.'],
+        ['Болгарский сплит-присед с гантелями', '3', '8–10 / нога', null, 'Задняя стопа на скамье. Контролируй колено передней ноги; задняя только помогает.'],
         ['Подъёмы на носки сидя', '3', '10–15', 'videos/0594-bOOdeyc.gif', 'Пауза внизу и полное сокращение наверху.']
       ]},
       { id: 'C', label: 'C', subtitle: 'Спина + руки', items: [
@@ -122,7 +134,7 @@
       $('#extras').innerHTML = `<h2 class="mb-3 mt-7 text-[13px] font-medium text-neutral-500">Дополнительно, если есть время</h2><div class="space-y-2">${workout.extras.map((item, index) => exerciseCard(item, index, true)).join('')}</div>`;
       animateIn('.exercise-row');
     }
-    function exerciseCard(item, index, extra) { return `<button type="button" onclick="openExercise(${index}, ${extra})" class="exercise-row flex min-h-24 w-full items-center gap-3 rounded-2xl border border-neutral-200 bg-white p-3 text-left shadow-[0_1px_1px_rgba(0,0,0,.02)] transition-[border-color,background-color,box-shadow] duration-200 hover:border-neutral-400 hover:bg-neutral-50 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-neutral-950"><img loading="lazy" src="${base + item[3]}" alt="GIF: ${item[0]}" class="size-18 shrink-0 rounded-xl bg-neutral-100 object-cover grayscale"><span class="min-w-0 flex-1"><b class="block text-[16px] leading-snug tracking-[-0.02em]">${item[0]}</b><span class="mt-1 block text-[14px] text-neutral-500">${item[1]} × ${item[2]}</span></span><i class="hgi-stroke hgi-arrow-right-01 shrink-0 text-[21px] text-neutral-500"></i></button>`; }
+    function exerciseCard(item, index, extra) { return `<button type="button" onclick="openExercise(${index}, ${extra})" class="exercise-row flex min-h-24 w-full items-center gap-3 rounded-2xl border border-neutral-200 bg-white p-3 text-left shadow-[0_1px_1px_rgba(0,0,0,.02)] transition-[border-color,background-color,box-shadow] duration-200 hover:border-neutral-400 hover:bg-neutral-50 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-neutral-950">${media[item[0]] ? `<img loading="lazy" src="assets/vital/${media[item[0]]}.jpg" alt="${item[0]}" class="size-18 shrink-0 rounded-xl bg-neutral-100 object-cover">` : `<span aria-hidden="true" class="size-18 shrink-0 rounded-xl bg-neutral-100"></span>`}<span class="min-w-0 flex-1"><b class="block text-[16px] leading-snug tracking-[-0.02em]">${item[0]}</b><span class="mt-1 block text-[14px] text-neutral-500">${item[1]} × ${item[2]}</span></span><i class="hgi-stroke hgi-arrow-right-01 shrink-0 text-[21px] text-neutral-500"></i></button>`; }
     function selectWorkout(index) { if (session) return; active = index; render(); }
     function openExercise(index, extra = false) {
       if (session && (extra || index !== session.index)) return;
@@ -131,7 +143,18 @@
       viewed = item;
       updateWeight();
       $('#step').textContent = extra ? 'Дополнительно' : `${index + 1}/${workouts[active].items.length}`;
-      $('#detailImage').src = base + item[3]; $('#detailImage').alt = `GIF: ${item[0]}`;
+      const id = media[item[0]], video = $('#detailVideo');
+      video.pause();
+      video.classList.toggle('hidden', !id);
+      $('#detailPlaceholder').classList.toggle('hidden', !!id);
+      $('#detailPlaceholder').classList.toggle('flex', !id);
+      if (id) {
+        video.poster = 'assets/vital/' + id + '.jpg';
+        video.src = 'assets/vital/' + id + '.mp4';
+        video.setAttribute('aria-label', item[0]);
+        video.muted = true;
+        video.play().catch(() => { video.controls = true; });
+      } else { video.removeAttribute('src'); video.removeAttribute('poster'); video.load(); }
       $('#detailName').textContent = item[0]; $('#sets').textContent = item[1]; $('#reps').textContent = item[2]; $('#cue').textContent = item[4];
       const detail = $('#detail'); detail.classList.remove('hidden'); detail.setAttribute('aria-hidden', 'false'); detail.scrollTop = 0;
       document.body.style.overflow = 'hidden';
@@ -139,6 +162,7 @@
       if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && window.anime) anime.animate(detail, { opacity: [0, 1], translateX: [18, 0], duration: 220, ease: 'out(3)' });
     }
     function closeExercise() {
+      $('#detailVideo').pause();
       const detail = $('#detail'); detail.classList.add('hidden'); detail.setAttribute('aria-hidden', 'true');
       document.body.style.overflow = '';
       if (session) $('#next').textContent = 'Продолжить';
