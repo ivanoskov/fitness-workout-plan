@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Тренировки — ягодицы и спина</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://use.hugeicons.com/font/icons.css">
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style type="text/tailwindcss">
+    @theme { --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif; }
+    @media (prefers-reduced-motion: reduce) { *, ::before, ::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body class="min-w-80 bg-neutral-100 font-sans text-neutral-950 antialiased">
+  <main class="mx-auto min-h-dvh max-w-[510px] bg-[#fbfbfa] px-5 pb-28 pt-[env(safe-area-inset-top)] sm:shadow-2xl">
+    <header class="flex h-21 items-center border-b border-neutral-200">
+      <h1 class="text-[25px] font-semibold tracking-[-0.055em]">Тренировки</h1>
+      <span id="timer" class="ml-auto font-medium tabular-nums"></span>
+    </header>
+
+    <section id="plan">
+      <div id="tabs" class="my-5 grid grid-cols-3 gap-1 rounded-2xl bg-neutral-200 p-1" aria-label="Выбор тренировки"></div>
+      <p class="mb-3 text-[13px] font-medium text-neutral-500">Разминка</p>
+      <div id="warmupList" class="mb-5 space-y-2"></div>
+      <p class="mb-3 text-[13px] font-medium text-neutral-500">Основное</p>
+      <div id="exerciseList" class="space-y-2"></div>
+      <section id="extras" class="mt-5"></section>
+    </section>
+  </main>
+
+  <button id="start" type="button" class="fixed inset-x-0 bottom-[env(safe-area-inset-bottom)] z-10 mx-auto flex h-16 w-full max-w-[510px] items-center justify-center gap-2 bg-neutral-950 text-[16px] font-semibold text-white shadow-[0_-8px_24px_rgba(0,0,0,.12)] transition-colors hover:bg-neutral-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950">
+    <i class="hgi-stroke hgi-play text-[22px]"></i>Начать
+  </button>
+
+  <div id="sessionControls" class="fixed inset-x-0 bottom-0 z-30 mx-auto hidden max-w-[510px] grid-cols-[1fr_2fr] gap-2 border-t border-neutral-200 bg-white p-3 pb-[max(12px,env(safe-area-inset-bottom))]">
+    <button id="stop" class="min-h-14 rounded-xl bg-neutral-100 font-semibold">Стоп</button>
+    <button id="next" class="min-h-14 rounded-xl bg-neutral-950 font-semibold text-white">Следующее</button>
+  </div>
+  <aside id="result" class="fixed inset-0 z-40 mx-auto hidden max-w-[510px] overflow-auto bg-[#fbfbfa] px-5 py-10">
+    <h2 id="resultTitle" class="text-3xl font-semibold tracking-tight"></h2>
+    <div id="resultStats" class="my-6"></div>
+    <h3 class="mb-4 text-sm text-neutral-500">Время по упражнениям, включая отдых</h3>
+    <div id="chart" class="space-y-4"></div>
+    <button id="dismissResult" class="mt-8 min-h-14 w-full rounded-xl bg-neutral-950 font-semibold text-white">К тренировкам</button>
+  </aside>
+  <aside id="detail" class="fixed inset-0 z-20 mx-auto hidden max-w-[510px] overflow-y-auto bg-[#fbfbfa] px-5 pb-32 pt-[env(safe-area-inset-top)]" aria-hidden="true">
+    <header class="flex h-21 items-center justify-between border-b border-neutral-200">
+      <button type="button" class="grid size-11 place-items-center rounded-full text-neutral-900 transition-colors hover:bg-neutral-200 focus-visible:outline-2 focus-visible:outline-neutral-950" aria-label="Назад к упражнениям" onclick="closeExercise()"><i class="hgi-stroke hgi-arrow-left-01 text-[23px]"></i></button>
+      <span id="step" class="text-[13px] font-medium text-neutral-500"></span><span id="detailTimer" class="text-sm tabular-nums"></span>
+    </header>
+    <video id="detailVideo" class="mt-5 aspect-square w-full rounded-2xl bg-neutral-100 object-contain" autoplay muted loop playsinline preload="metadata"></video>
+    <div id="detailPlaceholder" class="mt-5 hidden aspect-square w-full items-center justify-center rounded-2xl bg-neutral-100 text-sm text-neutral-500">Анимация пока недоступна</div>
+    <h2 id="detailName" class="mt-6 text-[30px] font-semibold leading-[1.08] tracking-[-0.055em]"></h2>
+    <p id="duration" class="mt-3 hidden text-lg font-medium text-neutral-600"></p>
+    <div class="mt-6 rounded-2xl border border-neutral-200 bg-white p-4">
+      <div class="flex items-center justify-between gap-3">
+        <button id="minusWeight" aria-label="Уменьшить вес на 0,5 кг" class="size-14 rounded-xl bg-neutral-100 text-3xl">−</button>
+        <span class="text-center"><span id="loadLabel" class="mb-1 block text-[12px] font-medium text-neutral-500">Вес</span><b id="weight" class="text-4xl font-semibold tabular-nums"></b><span id="weightUnit" class="ml-1 text-neutral-500">кг</span></span>
+        <button id="plusWeight" aria-label="Увеличить вес на 0,5 кг" class="size-14 rounded-xl bg-neutral-100 text-3xl">+</button>
+      </div>
+      <p id="weightNote" class="mt-3 text-center text-xs text-neutral-500"></p>
+    </div>
+    <div id="exerciseMetrics" class="mt-6 grid grid-cols-3 gap-3 text-center">
+      <div class="rounded-2xl border border-neutral-300 bg-white py-4"><b id="sets" class="block text-[21px] font-semibold tracking-[-0.04em]"></b><span class="mt-1 block text-[12px] leading-tight text-neutral-500">подходы</span></div>
+      <div class="rounded-2xl border border-neutral-300 bg-white py-4"><b id="reps" class="block text-[21px] font-semibold tracking-[-0.04em]"></b><span class="mt-1 block text-[12px] leading-tight text-neutral-500">повторы</span></div>
+      <div class="rounded-2xl border border-neutral-300 bg-white py-4"><b class="block text-[21px] font-semibold tracking-[-0.04em]">RIR 2–3</b><span class="mt-1 block text-[12px] leading-tight text-neutral-500">запас</span></div>
+    </div>
+    <p id="cue" class="mt-5 rounded-2xl border border-neutral-200 bg-white px-4 py-4 text-[14px] leading-relaxed text-neutral-700"></p>
+  </aside>
+
+  <script src="https://cdn.jsdelivr.net/npm/animejs@4.5.0/dist/bundles/anime.umd.min.js"></script>
+  <script>
+    const media = {
+      'Ягодичный мост со штангой': '0057',
+      'Бабочка в тренажёре': '0051',
+      'Румынская тяга': '0060',
+      'Болгарский сплит-присед': '0063',
+      'Жим ногами под 45°': '0074',
+      'Сгибание ног лёжа': '0075',
+      'Жим гантелей сидя': '0080',
+      'Разгибание рук с канатом': '0085',
+      'Разведения гантелей в стороны': '0096',
+      'Обратная бабочка': '0099',
+      'Разведение ног в тренажёре': '0069',
+      'Отведение ноги назад в кроссовере': '0061',
+      'Ходьба на беговой дорожке': '0086'
+    };
+    const warmup = ['Ходьба на беговой дорожке', '1', '5 минут', null, 'Спокойная ходьба. Подбери комфортную скорость, чтобы свободно разговаривать. Перед первым силовым упражнением сделай несколько лёгких разминочных подходов.'];
+    const cooldown = ['Ходьба на беговой дорожке', '1', '8–10 минут', null, 'Иди в комфортном темпе: дыхание учащается, но можно разговаривать. В конце постепенно снизь скорость.', 'cardio'];
+    const workouts = [
+      { id: 'A', label: 'A', subtitle: 'Ягодицы + тяга', items: [
+        ['Ягодичный мост со штангой', '3', '8–12', null, 'Верх спины на скамье. Поднимай таз сокращением ягодиц, не переразгибая поясницу. Отдых около 2 минут. Первые 2 недели — 2 рабочих подхода.'],
+        ['Тяга верхнего блока', '3', '10–12', null, 'Тяни локти вниз к рёбрам, не раскачивай корпус. Отдых 90 секунд. Первые 2 недели — 2 рабочих подхода.'],
+        ['Жим ногами под 45°', '2', '10–12', null, 'Поясница остаётся на спинке. Опускай платформу до комфортной глубины. Отдых 90–120 секунд.'],
+        ['Бабочка в тренажёре', '2', '12–15', null, 'Своди руки плавно, не выводя плечи вперёд. Отдых 60–90 секунд.'],
+        ['Разведение ног в тренажёре', '2', '15–20', null, 'Разводи ноги под контролем, не раскачивая корпус. Отдых 60 секунд.'],
+        cooldown
+      ], extras: [
+        ['Разгибание рук с канатом', '2', '12–15', null, 'Локти около корпуса, движение без рывков. Отдых 60 секунд. Первые 2 недели пропускай дополнительные упражнения.']
+      ]},
+      { id: 'B', label: 'B', subtitle: 'Ягодицы + спина', items: [
+        ['Румынская тяга', '2', '8–12', null, 'Таз назад, колени слегка согнуты, штанга близко к ногам. Спина нейтральна. Отдых около 2 минут.'],
+        ['Тяга нижнего блока к поясу', '3', '10–12', null, 'Веди локти назад, не округляй поясницу и не отклоняйся рывком. Отдых 90 секунд. Первые 2 недели — 2 рабочих подхода.'],
+        ['Сгибание ног лёжа', '2', '10–15', null, 'Таз прижат к тренажёру, движение плавное. Отдых 60–90 секунд.'],
+        ['Жим гантелей сидя', '2', '10–12', null, 'Спина на опоре. Не прогибай поясницу, поднимай гантели под контролем. Отдых 90 секунд.'],
+        ['Отведение ноги назад в кроссовере', '2', '12–15 / нога', null, 'Держись за опору. Отводи ногу за счёт ягодиц, не прогибаясь в пояснице. Отдых 60 секунд после обеих ног.'],
+        cooldown
+      ], extras: [
+        ['Разведение ног в тренажёре', '2', '15–20', null, 'Разводи ноги плавно, без раскачивания. Отдых 60 секунд. Первые 2 недели пропускай дополнительные упражнения.']
+      ]},
+      { id: 'C', label: 'C', subtitle: 'Ягодицы + верх', items: [
+        ['Ягодичный мост со штангой', '2', '10–15', null, 'Верх спины на скамье. Поднимай таз сокращением ягодиц, не переразгибая поясницу. Отдых около 2 минут.'],
+        ['Болгарский сплит-присед', '2', '8–10 / нога', null, 'Начни без гантелей, при необходимости держись за опору. Контролируй колено передней ноги. Отдых 90–120 секунд после обеих ног.'],
+        ['Тяга верхнего блока', '2', '10–12', null, 'Тяни локти вниз к рёбрам, не раскачивай корпус. Отдых 90 секунд.'],
+        ['Бабочка в тренажёре', '2', '12–15', null, 'Своди руки плавно, не выводя плечи вперёд. Отдых 60–90 секунд.'],
+        ['Обратная бабочка', '2', '12–15', null, 'Веди движение задней дельтой и верхом спины. Не поднимай плечи к ушам. Отдых 60–90 секунд.'],
+        cooldown
+      ], extras: [
+        ['Разведения гантелей в стороны', '2', '12–15', null, 'Поднимай локтями, без рывка и подъёма плеч. Отдых 60 секунд. Первые 2 недели пропускай дополнительные упражнения.']
+      ]}
+    ];
+    let active = 0;
+    let session = null, viewed = null, viewedKind = 'exercise';
+    const weights = new Map([['Болгарский сплит-присед', 0]]);
+    const speeds = new Map([['Ходьба на беговой дорожке', 4.5]]);
+    const $ = selector => document.querySelector(selector);
+    function animateIn(targets) {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !window.anime) return;
+      anime.animate(targets, { opacity: [0, 1], translateY: [10, 0], duration: 260, delay: anime.stagger(35), ease: 'out(3)' });
+    }
+    function render() {
+      const workout = workouts[active];
+      $('#tabs').innerHTML = workouts.map((w, i) => `<button type="button" onclick="selectWorkout(${i})" aria-pressed="${i === active}" class="min-h-14 rounded-xl px-3 text-left transition-colors ${i === active ? 'bg-white text-neutral-950 shadow-sm' : 'text-neutral-500 hover:text-neutral-950'}"><span class="block text-[18px] font-semibold leading-none">${w.label}</span><span class="mt-1 block text-[11px] leading-tight">${w.subtitle}</span></button>`).join('');
+      $('#warmupList').innerHTML = exerciseCard(warmup, 0, false, true);
+      $('#exerciseList').innerHTML = workout.items.map((item, index) => exerciseCard(item, index, false)).join('');
+      $('#extras').innerHTML = `<h2 class="mb-3 mt-7 text-[13px] font-medium text-neutral-500">Дополнительно, если есть время</h2><div class="space-y-2">${workout.extras.map((item, index) => exerciseCard(item, index, true)).join('')}</div>`;
+      animateIn('.exercise-row');
+    }
+    function exerciseCard(item, index, extra, isWarmup = false) { return `<button type="button" onclick="openExercise(${index}, ${extra}, ${isWarmup})" class="exercise-row flex min-h-24 w-full items-center gap-3 rounded-2xl border border-neutral-200 bg-white p-3 text-left shadow-[0_1px_1px_rgba(0,0,0,.02)] transition-[border-color,background-color,box-shadow] duration-200 hover:border-neutral-400 hover:bg-neutral-50 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-neutral-950">${media[item[0]] ? `<img loading="lazy" src="assets/vital/${media[item[0]]}.jpg" alt="${item[0]}" class="size-18 shrink-0 rounded-xl bg-neutral-100 object-cover">` : `<span aria-hidden="true" class="size-18 shrink-0 rounded-xl bg-neutral-100"></span>`}<span class="min-w-0 flex-1"><b class="block text-[16px] leading-snug tracking-[-0.02em]">${item[0]}</b><span class="mt-1 block text-[14px] text-neutral-500">${isWarmup || item[5] === 'cardio' ? item[2] + ' · лёгкий темп' : item[1] + ' × ' + item[2]}</span></span><i class="hgi-stroke hgi-arrow-right-01 shrink-0 text-[21px] text-neutral-500"></i></button>`; }
+    function selectWorkout(index) { if (session) return; active = index; render(); }
+    function openExercise(index, extra = false, isWarmup = false) {
+      if (session && (isWarmup !== (session.stage === 'warmup') || (!isWarmup && (extra || index !== session.index)))) return;
+      const collection = isWarmup ? [warmup] : extra ? workouts[active].extras : workouts[active].items;
+      const item = collection[index];
+      viewed = item; viewedKind = isWarmup || item[5] === 'cardio' ? 'cardio' : 'exercise';
+      updateWeight();
+      $('#step').textContent = isWarmup ? 'Разминка' : extra ? 'Дополнительно' : `${index + 1}/${workouts[active].items.length}`;
+      const id = media[item[0]], video = $('#detailVideo');
+      video.pause();
+      video.classList.toggle('hidden', !id);
+      $('#detailPlaceholder').classList.toggle('hidden', !!id);
+      $('#detailPlaceholder').classList.toggle('flex', !id);
+      if (id) {
+        video.poster = 'assets/vital/' + id + '.jpg';
+        video.src = 'assets/vital/' + id + '.mp4';
+        video.setAttribute('aria-label', item[0]);
+        video.muted = true;
+        video.play().catch(() => { video.controls = true; });
+      } else { video.removeAttribute('src'); video.removeAttribute('poster'); video.load(); }
+      $('#detailName').textContent = item[0]; $('#sets').textContent = item[1]; $('#reps').textContent = item[2]; $('#cue').textContent = item[4];
+      $('#exerciseMetrics').classList.toggle('hidden', viewedKind === 'cardio');
+      $('#duration').classList.toggle('hidden', viewedKind !== 'cardio');
+      $('#duration').textContent = item[2];
+      const detail = $('#detail');
+      const wasHidden = detail.classList.contains('hidden');
+      detail.classList.remove('hidden'); detail.setAttribute('aria-hidden', 'false'); detail.scrollTop = 0;
+      document.body.style.overflow = 'hidden';
+      tick();
+      if (wasHidden && !window.matchMedia('(prefers-reduced-motion: reduce)').matches && window.anime) anime.animate(detail, { opacity: [0, 1], translateX: [18, 0], duration: 220, ease: 'out(3)' });
+    }
+    function closeExercise() {
+      $('#detailVideo').pause();
+      const detail = $('#detail'); detail.classList.add('hidden'); detail.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+      if (session) $('#next').textContent = 'Продолжить';
+    }
+    function updateWeight() {
+      const isWarmup = viewedKind === 'cardio';
+      $('#loadLabel').textContent = isWarmup ? 'Скорость' : 'Вес';
+      $('#weightUnit').textContent = isWarmup ? 'км/ч' : 'кг';
+      $('#minusWeight').setAttribute('aria-label', isWarmup ? 'Уменьшить скорость на 0,5 км/ч' : 'Уменьшить вес на 0,5 кг');
+      $('#plusWeight').setAttribute('aria-label', isWarmup ? 'Увеличить скорость на 0,5 км/ч' : 'Увеличить вес на 0,5 кг');
+      if (isWarmup) {
+        const value = speeds.get(viewed[0]) ?? 4.5;
+        $('#weight').textContent = value.toLocaleString('ru-RU');
+        $('#minusWeight').disabled = value <= 1;
+        $('#plusWeight').disabled = value >= 10;
+        $('#minusWeight').style.opacity = $('#minusWeight').disabled ? '.35' : '1';
+        $('#plusWeight').style.opacity = $('#plusWeight').disabled ? '.35' : '1';
+        $('#weightNote').textContent = 'Скорость дорожки · шаг 0,5 км/ч';
+        return;
+      }
+      const value = weights.get(viewed[0]);
+      $('#weight').textContent = value === undefined ? '—' : value.toLocaleString('ru-RU');
+      $('#minusWeight').disabled = value === undefined || value === 0;
+      $('#minusWeight').style.opacity = $('#minusWeight').disabled ? '.35' : '1';
+      $('#plusWeight').disabled = false; $('#plusWeight').style.opacity = '1';
+      const unit = /гантел|Болгарский/.test(viewed[0]) ? 'на одну гантель' : /штанг|Румынская/.test(viewed[0]) ? 'общий вес с грифом' : 'вес на тренажёре / отягощение';
+      $('#weightNote').textContent = (value === undefined ? 'Вес не задан · ' : '') + unit + ' · шаг 0,5 кг';
+    }
+    function changeWeight(delta) {
+      if (!viewed) return;
+      if (viewedKind === 'cardio') {
+        speeds.set(viewed[0], Math.min(10, Math.max(1, (speeds.get(viewed[0]) ?? 4.5) + delta)));
+        updateWeight();
+        return;
+      }
+      weights.set(viewed[0], Math.max(0, (weights.get(viewed[0]) || 0) + delta));
+      updateWeight();
+    }
+    function formatTime(ms) {
+      const seconds = Math.floor(Math.max(0, ms) / 1000);
+      return [Math.floor(seconds / 60), seconds % 60].map(n => String(n).padStart(2, '0')).join(':');
+    }
+    function tick() {
+      const text = session ? formatTime(Date.now() - session.start) : '';
+      $('#timer').textContent = text; $('#detailTimer').textContent = text;
+    }
+    function startSession() {
+      if (session) return;
+      const now = Date.now();
+      session = { start: now, exerciseStart: now, stage: 'warmup', index: 0, rows: [] };
+      $('#result').classList.add('hidden');
+      $('#start').classList.add('hidden');
+      $('#sessionControls').classList.remove('hidden');
+      $('#sessionControls').classList.add('grid');
+      $('#next').textContent = 'К упражнениям';
+      openExercise(0, false, true);
+    }
+    function recordExercise(completed) {
+      const now = Date.now();
+      const item = session.stage === 'warmup' ? warmup : workouts[active].items[session.index];
+      session.rows.push({ name: item[0], ms: now - session.exerciseStart, completed });
+      session.exerciseStart = now;
+    }
+    function nextExercise() {
+      if (!session) return;
+      if ($('#detail').classList.contains('hidden')) {
+        openExercise(session.index, false, session.stage === 'warmup');
+      } else {
+        recordExercise(true);
+        if (session.stage === 'warmup') {
+          session.stage = 'main';
+          openExercise(0);
+          $('#next').textContent = workouts[active].items.length === 1 ? 'Завершить' : 'Следующее';
+          return;
+        }
+        if (session.index === workouts[active].items.length - 1) { finishSession(true); return; }
+        session.index++;
+        openExercise(session.index);
+      }
+      $('#next').textContent = session.index === workouts[active].items.length - 1 ? 'Завершить' : 'Следующее';
+    }
+    function finishSession(completed = false) {
+      if (!session) return;
+      if (!completed) recordExercise(false);
+      const elapsed = Date.now() - session.start;
+      const rows = session.rows;
+      const count = rows.filter(r => r.completed).length;
+      $('#resultTitle').textContent = completed ? 'Тренировка завершена' : 'Тренировка остановлена';
+      $('#resultStats').textContent = formatTime(elapsed) + ' · ' + count + ' из ' + (workouts[active].items.length + 1) + ' упражнений завершено';
+      const max = Math.max(1, ...rows.map(r => r.ms));
+      $('#chart').replaceChildren();
+      rows.forEach(row => {
+        const block = document.createElement('div');
+        const label = document.createElement('p');
+        label.className = 'mb-2 text-sm';
+        label.textContent = row.name + (row.completed ? '' : ' · не завершено') + ' — ' + formatTime(row.ms);
+        const track = document.createElement('div');
+        track.className = 'h-2 rounded-full bg-neutral-200';
+        const bar = document.createElement('div');
+        bar.className = 'h-2 rounded-full bg-neutral-900';
+        bar.style.width = (100 * row.ms / max) + '%';
+        track.append(bar); block.append(label, track); $('#chart').append(block);
+      });
+      session = null; tick(); closeExercise();
+      $('#sessionControls').classList.add('hidden'); $('#sessionControls').classList.remove('grid');
+      $('#start').classList.remove('hidden'); $('#result').classList.remove('hidden');
+    }
+    $('#start').addEventListener('click', startSession);
+    $('#next').addEventListener('click', nextExercise);
+    $('#stop').addEventListener('click', () => finishSession(false));
+    $('#dismissResult').addEventListener('click', () => $('#result').classList.add('hidden'));
+    $('#minusWeight').addEventListener('click', () => changeWeight(-0.5));
+    $('#plusWeight').addEventListener('click', () => changeWeight(0.5));
+    setInterval(tick, 1000);
+    render();
+  </script>
+</body>
+</html>
+
